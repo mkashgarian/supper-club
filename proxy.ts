@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, sessionToken } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/login", "/api/login", "/api/spin", "/api/reminder"];
+const PUBLIC_PATHS = ["/login", "/api/login", "/api/spin", "/api/reminder", "/api/admin/init-db"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
