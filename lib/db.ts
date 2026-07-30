@@ -18,6 +18,7 @@ export type Submission = {
   cycle_month: string;
   person_name: string;
   restaurant_name: string;
+  cuisine: string | null;
   notes: string | null;
   url: string | null;
   created_at: string;
@@ -41,6 +42,7 @@ export async function initSchema() {
       cycle_month     TEXT NOT NULL,
       person_name     TEXT NOT NULL,
       restaurant_name TEXT NOT NULL,
+      cuisine         TEXT,
       notes           TEXT,
       url             TEXT,
       created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -49,6 +51,8 @@ export async function initSchema() {
       UNIQUE (cycle_month, restaurant_name)
     )
   `;
+  // Migration for databases created before the cuisine field existed.
+  await sql`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS cuisine TEXT`;
   await sql`
     CREATE TABLE IF NOT EXISTS spin_history (
       id                SERIAL PRIMARY KEY,
@@ -74,6 +78,13 @@ function pad(n: number) {
 
 export function monthString(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+}
+
+/** "2026-08" -> "August", or "August 2026" with withYear. */
+export function formatMonthName(cycleMonth: string, opts?: { withYear?: boolean }): string {
+  const [year, month] = cycleMonth.split("-").map(Number);
+  const name = new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long" });
+  return opts?.withYear ? `${name} ${year}` : name;
 }
 
 /** The month whose dinner has most recently been (or is about to be) decided. */
@@ -127,12 +138,13 @@ export async function createSubmission(input: {
   cycleMonth: string;
   personName: string;
   restaurantName: string;
+  cuisine?: string;
   notes?: string;
   url?: string;
 }): Promise<Submission> {
   const rows = await sql`
-    INSERT INTO submissions (cycle_month, person_name, restaurant_name, notes, url)
-    VALUES (${input.cycleMonth}, ${input.personName}, ${input.restaurantName}, ${input.notes ?? null}, ${input.url ?? null})
+    INSERT INTO submissions (cycle_month, person_name, restaurant_name, cuisine, notes, url)
+    VALUES (${input.cycleMonth}, ${input.personName}, ${input.restaurantName}, ${input.cuisine ?? null}, ${input.notes ?? null}, ${input.url ?? null})
     RETURNING *
   `;
   return rows[0] as Submission;
@@ -140,12 +152,13 @@ export async function createSubmission(input: {
 
 export async function updateSubmission(
   id: number,
-  input: { personName: string; restaurantName: string; notes?: string; url?: string }
+  input: { personName: string; restaurantName: string; cuisine?: string; notes?: string; url?: string }
 ): Promise<Submission> {
   const rows = await sql`
     UPDATE submissions
     SET person_name = ${input.personName},
         restaurant_name = ${input.restaurantName},
+        cuisine = ${input.cuisine ?? null},
         notes = ${input.notes ?? null},
         url = ${input.url ?? null},
         updated_at = now()

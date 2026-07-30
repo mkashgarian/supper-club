@@ -31,6 +31,7 @@ export default function SubmissionList({
               initial={{
                 personName: s.person_name,
                 restaurantName: s.restaurant_name,
+                cuisine: s.cuisine ?? "",
                 notes: s.notes ?? "",
                 url: s.url ?? "",
               }}
@@ -42,7 +43,8 @@ export default function SubmissionList({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-medium">
-                  {s.restaurant_name}{" "}
+                  {s.restaurant_name}
+                  {s.cuisine && <span className="font-normal opacity-60"> · {s.cuisine}</span>}{" "}
                   {s.url && (
                     <a href={s.url} target="_blank" rel="noreferrer" className="text-sm underline opacity-70">
                       link

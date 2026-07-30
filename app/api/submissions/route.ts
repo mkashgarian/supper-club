@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const personName = String(body.personName ?? "").trim();
   const restaurantName = String(body.restaurantName ?? "").trim();
+  const cuisine = body.cuisine ? String(body.cuisine).trim() : undefined;
   const notes = body.notes ? String(body.notes).trim() : undefined;
   const url = body.url ? String(body.url).trim() : undefined;
 
@@ -60,6 +61,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const submission = await createSubmission({ cycleMonth, personName, restaurantName, notes, url });
+  const submission = await createSubmission({ cycleMonth, personName, restaurantName, cuisine, notes, url });
   return NextResponse.json({ submission }, { status: 201 });
 }

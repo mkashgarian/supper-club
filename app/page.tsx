@@ -1,7 +1,13 @@
 import Link from "next/link";
 import SpinWheel from "@/components/SpinWheel";
 import SubmissionsSection from "@/components/SubmissionsSection";
-import { currentDisplayCycleMonth, getSpinForCycle, getSubmissionsForCycle, openCycleMonth } from "@/lib/db";
+import {
+  currentDisplayCycleMonth,
+  formatMonthName,
+  getSpinForCycle,
+  getSubmissionsForCycle,
+  openCycleMonth,
+} from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +30,7 @@ export default async function HomePage() {
       </div>
 
       <section className="flex flex-col items-center gap-4 text-center">
-        <h2 className="text-lg font-semibold">{displayMonth}&apos;s pick</h2>
+        <h2 className="text-lg font-semibold">{formatMonthName(displayMonth)}&apos;s pick</h2>
         {spin ? (
           <>
             <SpinWheel pool={spin.pool_snapshot} winnerRestaurant={spin.winner_restaurant} />
@@ -36,10 +42,13 @@ export default async function HomePage() {
         ) : (
           <p className="opacity-60">No spin yet this month — check back on the 1st!</p>
         )}
+        <Link href="/preview" className="text-sm underline underline-offset-4 opacity-70">
+          🎲 Preview a test spin
+        </Link>
       </section>
 
       <section>
-        <SubmissionsSection cycleMonth={submitMonth} initialSubmissions={submissions} />
+        <SubmissionsSection cycleMonth={formatMonthName(submitMonth)} initialSubmissions={submissions} />
       </section>
     </main>
   );

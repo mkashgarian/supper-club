@@ -5,11 +5,18 @@ import { useState } from "react";
 export type SubmissionValues = {
   personName: string;
   restaurantName: string;
+  cuisine: string;
   notes: string;
   url: string;
 };
 
-const EMPTY: SubmissionValues = { personName: "", restaurantName: "", notes: "", url: "" };
+const EMPTY: SubmissionValues = {
+  personName: "",
+  restaurantName: "",
+  cuisine: "",
+  notes: "",
+  url: "",
+};
 
 export default function SubmissionForm({
   initial,
@@ -57,12 +64,20 @@ export default function SubmissionForm({
           className="rounded-lg border border-black/15 dark:border-white/20 bg-transparent px-3 py-2"
         />
       </div>
-      <input
-        placeholder="Link (optional)"
-        value={values.url}
-        onChange={(e) => setValues({ ...values, url: e.target.value })}
-        className="rounded-lg border border-black/15 dark:border-white/20 bg-transparent px-3 py-2"
-      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input
+          placeholder="Cuisine (optional)"
+          value={values.cuisine}
+          onChange={(e) => setValues({ ...values, cuisine: e.target.value })}
+          className="rounded-lg border border-black/15 dark:border-white/20 bg-transparent px-3 py-2"
+        />
+        <input
+          placeholder="Link (optional)"
+          value={values.url}
+          onChange={(e) => setValues({ ...values, url: e.target.value })}
+          className="rounded-lg border border-black/15 dark:border-white/20 bg-transparent px-3 py-2"
+        />
+      </div>
       <textarea
         placeholder="Notes (optional)"
         value={values.notes}
