@@ -40,9 +40,6 @@ export default async function HomePage() {
         ) : (
           <p className="opacity-60">No spin yet this month — check back on the 1st!</p>
         )}
-        <Link href="/preview" className="text-sm underline underline-offset-4 opacity-70">
-          🎲 Preview a test spin
-        </Link>
       </section>
 
       <section>
