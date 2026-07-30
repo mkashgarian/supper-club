@@ -56,13 +56,29 @@ export default function SubmissionList({
               </div>
               <div className="flex gap-2 shrink-0">
                 <button
-                  onClick={() => onStartEdit(s.id)}
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Are you sure? Are you ${s.person_name}? You're about to edit ${s.person_name}'s pick (${s.restaurant_name}).`
+                      )
+                    ) {
+                      onStartEdit(s.id);
+                    }
+                  }}
                   className="text-sm underline underline-offset-4 opacity-70 hover:opacity-100"
                 >
                   Edit
                 </button>
                 <button
-                  onClick={() => onDelete(s.id)}
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Are you sure? Are you ${s.person_name}? You're about to remove ${s.person_name}'s pick (${s.restaurant_name}).`
+                      )
+                    ) {
+                      onDelete(s.id);
+                    }
+                  }}
                   className="text-sm underline underline-offset-4 opacity-70 hover:opacity-100"
                 >
                   Remove
