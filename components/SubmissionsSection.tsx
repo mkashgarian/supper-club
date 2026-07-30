@@ -5,6 +5,14 @@ import type { Submission } from "@/lib/db";
 import SubmissionForm, { SubmissionValues } from "./SubmissionForm";
 import SubmissionList from "./SubmissionList";
 
+async function safeJson(res: Response): Promise<{ error?: string; [key: string]: unknown }> {
+  try {
+    return await res.json();
+  } catch {
+    return { error: `Something went wrong (server returned ${res.status}).` };
+  }
+}
+
 export default function SubmissionsSection({
   cycleMonth,
   initialSubmissions,
@@ -18,8 +26,8 @@ export default function SubmissionsSection({
 
   async function refresh() {
     const res = await fetch("/api/submissions");
-    const data = await res.json();
-    setSubmissions(data.submissions);
+    const data = await safeJson(res);
+    if (Array.isArray(data.submissions)) setSubmissions(data.submissions as Submission[]);
   }
 
   async function handleAdd(values: SubmissionValues): Promise<string | null> {
@@ -28,10 +36,11 @@ export default function SubmissionsSection({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok) {
-      setAddError(data.error);
-      return data.error;
+      const message = data.error ?? "Couldn't submit — please try again.";
+      setAddError(message);
+      return message;
     }
     setAddError(null);
     await refresh();
@@ -44,8 +53,8 @@ export default function SubmissionsSection({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),
     });
-    const data = await res.json();
-    if (!res.ok) return data.error;
+    const data = await safeJson(res);
+    if (!res.ok) return data.error ?? "Couldn't save — please try again.";
     setEditingId(null);
     await refresh();
     return null;

@@ -32,13 +32,11 @@ export default async function HomePage() {
       <section className="flex flex-col items-center gap-4 text-center">
         <h2 className="text-lg font-semibold">{formatMonthName(displayMonth)}&apos;s pick</h2>
         {spin ? (
-          <>
-            <SpinWheel pool={spin.pool_snapshot} winnerRestaurant={spin.winner_restaurant} />
-            <p>
-              🎉 <span className="font-semibold">{spin.winner_restaurant}</span>, submitted by{" "}
-              {spin.winner_person}
-            </p>
-          </>
+          <SpinWheel
+            pool={spin.pool_snapshot}
+            winnerRestaurant={spin.winner_restaurant}
+            winnerPerson={spin.winner_person}
+          />
         ) : (
           <p className="opacity-60">No spin yet this month — check back on the 1st!</p>
         )}

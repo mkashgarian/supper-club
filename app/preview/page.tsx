@@ -34,11 +34,7 @@ export default async function PreviewPage() {
         {usingSampleData && " There are no real submissions yet, so this uses sample restaurants."}
       </p>
 
-      <SpinWheel pool={pool} winnerRestaurant={winner.restaurant_name} />
-
-      <p>
-        Landed on: <span className="font-semibold">{winner.restaurant_name}</span>
-      </p>
+      <SpinWheel pool={pool} winnerRestaurant={winner.restaurant_name} winnerPerson={winner.person_name} />
 
       <a href="/preview" className="text-sm underline underline-offset-4 opacity-70">
         Reload for a new random spin

@@ -62,25 +62,24 @@ function drawWheel(canvas: HTMLCanvasElement, entries: WheelEntry[]) {
 export default function SpinWheel({
   pool,
   winnerRestaurant,
+  winnerPerson,
 }: {
   pool: WheelEntry[];
   winnerRestaurant: string;
+  winnerPerson?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [rotation, setRotation] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const [hasSpun, setHasSpun] = useState(false);
   const spinsRef = useRef(0);
 
   useEffect(() => {
     if (canvasRef.current) drawWheel(canvasRef.current, pool);
   }, [pool]);
 
-  useEffect(() => {
-    spin();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pool, winnerRestaurant]);
-
   function spin() {
-    if (pool.length === 0) return;
+    if (pool.length === 0 || spinning) return;
     const winnerIndex = pool.findIndex(
       (p) => p.restaurant_name.toLowerCase() === winnerRestaurant.toLowerCase()
     );
@@ -90,11 +89,26 @@ export default function SpinWheel({
     spinsRef.current += 1;
     const extraTurns = 4 + spinsRef.current;
     const target = extraTurns * 360 - winnerCenterDeg;
+
+    setSpinning(true);
+    setHasSpun(true);
     setRotation(target);
+    window.setTimeout(() => setSpinning(false), 4000);
   }
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-5">
+      <button
+        onClick={spin}
+        disabled={spinning || pool.length === 0}
+        className="relative rounded-full px-8 py-3 text-lg font-bold text-white shadow-lg
+          bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600
+          transition-transform hover:scale-105 active:scale-95
+          disabled:opacity-60 disabled:hover:scale-100"
+      >
+        {spinning ? "Spinning..." : hasSpun ? "🎡 Spin Again" : "🎡 SPIN"}
+      </button>
+
       <div className="relative" style={{ width: SIZE, height: SIZE, maxWidth: "90vw" }}>
         <div
           className="absolute left-1/2 -translate-x-1/2 -top-2 z-10"
@@ -118,12 +132,13 @@ export default function SpinWheel({
           }}
         />
       </div>
-      <button
-        onClick={spin}
-        className="text-sm underline underline-offset-4 opacity-70 hover:opacity-100"
-      >
-        Watch it spin again
-      </button>
+
+      {hasSpun && !spinning && (
+        <p>
+          🎉 <span className="font-semibold">{winnerRestaurant}</span>
+          {winnerPerson && <>, submitted by {winnerPerson}</>}
+        </p>
+      )}
     </div>
   );
 }
