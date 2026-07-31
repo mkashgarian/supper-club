@@ -14,10 +14,8 @@ async function safeJson(res: Response): Promise<{ error?: string; [key: string]:
 }
 
 export default function SubmissionsSection({
-  cycleMonth,
   initialSubmissions,
 }: {
-  cycleMonth: string;
   initialSubmissions: Submission[];
 }) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
@@ -68,13 +66,17 @@ export default function SubmissionsSection({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-lg font-semibold mb-3">Submit your pick for {cycleMonth}</h2>
+        <h2 className="text-lg font-semibold mb-3">Add your pick</h2>
+        <p className="text-sm opacity-60 mb-3">
+          One active pick per person. It stays in the running until it wins — no need to resubmit
+          each month.
+        </p>
         <SubmissionForm submitLabel="Submit" onSubmit={handleAdd} />
         {addError && <p className="text-sm text-red-500 mt-2">{addError}</p>}
       </div>
       <div>
         <h3 className="text-sm font-medium opacity-70 mb-2">
-          Submitted so far ({submissions.length})
+          In the running ({submissions.length})
         </h3>
         <SubmissionList
           submissions={submissions}

@@ -1,24 +1,14 @@
 import Link from "next/link";
 import SpinWheel from "@/components/SpinWheel";
 import SubmissionsSection from "@/components/SubmissionsSection";
-import {
-  currentDisplayCycleMonth,
-  formatMonthName,
-  getSpinForCycle,
-  getSubmissionsForCycle,
-  openCycleMonth,
-} from "@/lib/db";
+import { currentDisplayCycleMonth, formatMonthName, getActivePool, getSpinForCycle } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const displayMonth = currentDisplayCycleMonth();
-  const submitMonth = openCycleMonth();
 
-  const [spin, submissions] = await Promise.all([
-    getSpinForCycle(displayMonth),
-    getSubmissionsForCycle(submitMonth),
-  ]);
+  const [spin, activePool] = await Promise.all([getSpinForCycle(displayMonth), getActivePool()]);
 
   return (
     <main className="min-h-screen max-w-2xl mx-auto px-4 py-8 flex flex-col gap-10">
@@ -43,7 +33,7 @@ export default async function HomePage() {
       </section>
 
       <section>
-        <SubmissionsSection cycleMonth={formatMonthName(submitMonth)} initialSubmissions={submissions} />
+        <SubmissionsSection initialSubmissions={activePool} />
       </section>
     </main>
   );

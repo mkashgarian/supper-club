@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   deleteSubmission,
+  getActivePool,
   getSubmissionById,
-  getSubmissionsForCycle,
   hasRestaurantWon,
-  isCycleLocked,
   updateSubmission,
 } from "@/lib/db";
 
@@ -15,9 +14,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!existing) {
     return NextResponse.json({ error: "Submission not found." }, { status: 404 });
   }
-  if (await isCycleLocked(existing.cycle_month)) {
+  if (existing.status !== "active") {
     return NextResponse.json(
-      { error: "This round has already been spun and is locked." },
+      { error: "This pick has already won and can't be edited." },
       { status: 409 }
     );
   }
@@ -46,19 +45,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     );
   }
 
-  const siblings = (await getSubmissionsForCycle(existing.cycle_month)).filter((s) => s.id !== id);
+  const siblings = (await getActivePool()).filter((s) => s.id !== id);
   const lowerPerson = personName.toLowerCase();
   const lowerRestaurant = restaurantName.toLowerCase();
 
   if (siblings.some((s) => s.person_name.toLowerCase() === lowerPerson)) {
     return NextResponse.json(
-      { error: "Someone else already submitted under that name this round." },
+      { error: "Someone else already has an active pick under that name." },
       { status: 409 }
     );
   }
   if (siblings.some((s) => s.restaurant_name.toLowerCase() === lowerRestaurant)) {
     return NextResponse.json(
-      { error: `${restaurantName} has already been submitted by someone else this round.` },
+      { error: `${restaurantName} is already someone else's active pick.` },
       { status: 409 }
     );
   }
@@ -74,9 +73,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!existing) {
     return NextResponse.json({ error: "Submission not found." }, { status: 404 });
   }
-  if (await isCycleLocked(existing.cycle_month)) {
+  if (existing.status !== "active") {
     return NextResponse.json(
-      { error: "This round has already been spun and is locked." },
+      { error: "This pick has already won and can't be removed." },
       { status: 409 }
     );
   }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import SpinWheel from "@/components/SpinWheel";
-import { getSubmissionsForCycle, openCycleMonth } from "@/lib/db";
+import { getActivePool } from "@/lib/db";
 import { pickWinner } from "@/lib/spin";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +14,7 @@ const SAMPLE_POOL = [
 ];
 
 export default async function PreviewPage() {
-  const cycleMonth = openCycleMonth();
-  const realSubmissions = await getSubmissionsForCycle(cycleMonth);
+  const realSubmissions = await getActivePool();
   const usingSampleData = realSubmissions.length === 0;
   const pool = usingSampleData ? SAMPLE_POOL : realSubmissions;
   const winner = pickWinner(pool)!;

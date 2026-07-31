@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createSubmission,
-  getSubmissionsForCycle,
-  hasRestaurantWon,
-  isCycleLocked,
-  openCycleMonth,
-} from "@/lib/db";
+import { createSubmission, getActivePool, hasRestaurantWon } from "@/lib/db";
 
 export async function GET() {
-  const cycleMonth = openCycleMonth();
-  const submissions = await getSubmissionsForCycle(cycleMonth);
-  return NextResponse.json({ cycleMonth, submissions });
+  const submissions = await getActivePool();
+  return NextResponse.json({ submissions });
 }
 
 export async function POST(req: NextRequest) {
@@ -28,15 +21,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const cycleMonth = openCycleMonth();
-
-  if (await isCycleLocked(cycleMonth)) {
-    return NextResponse.json(
-      { error: "This round has already been spun and is locked." },
-      { status: 409 }
-    );
-  }
-
   if (await hasRestaurantWon(restaurantName)) {
     return NextResponse.json(
       { error: `${restaurantName} has already won a previous month and can't be picked again.` },
@@ -44,23 +28,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const existing = await getSubmissionsForCycle(cycleMonth);
+  const existing = await getActivePool();
   const lowerPerson = personName.toLowerCase();
   const lowerRestaurant = restaurantName.toLowerCase();
 
   if (existing.some((s) => s.person_name.toLowerCase() === lowerPerson)) {
     return NextResponse.json(
-      { error: "You've already submitted a pick this round — edit your existing submission instead." },
+      { error: "You already have an active pick in the pool — edit your existing submission instead." },
       { status: 409 }
     );
   }
   if (existing.some((s) => s.restaurant_name.toLowerCase() === lowerRestaurant)) {
     return NextResponse.json(
-      { error: `${restaurantName} has already been submitted by someone else this round.` },
+      { error: `${restaurantName} is already someone else's active pick.` },
       { status: 409 }
     );
   }
 
-  const submission = await createSubmission({ cycleMonth, personName, restaurantName, cuisine, notes, url });
+  const submission = await createSubmission({ personName, restaurantName, cuisine, notes, url });
   return NextResponse.json({ submission }, { status: 201 });
 }

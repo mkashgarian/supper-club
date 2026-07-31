@@ -13,6 +13,8 @@ function sql(strings: TemplateStringsArray, ...values: unknown[]) {
   return cachedSql(strings, ...values);
 }
 
+export type SubmissionStatus = "active" | "won";
+
 export type Submission = {
   id: number;
   cycle_month: string;
@@ -21,6 +23,8 @@ export type Submission = {
   cuisine: string | null;
   notes: string | null;
   url: string | null;
+  status: SubmissionStatus;
+  won_cycle_month: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -45,14 +49,31 @@ export async function initSchema() {
       cuisine         TEXT,
       notes           TEXT,
       url             TEXT,
+      status          TEXT NOT NULL DEFAULT 'active',
+      won_cycle_month TEXT,
       created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-      UNIQUE (cycle_month, person_name),
-      UNIQUE (cycle_month, restaurant_name)
+      updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `;
-  // Migration for databases created before the cuisine field existed.
+  // Migrations for databases created before later fields existed.
   await sql`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS cuisine TEXT`;
+  await sql`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'`;
+  await sql`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS won_cycle_month TEXT`;
+
+  // The pool used to be scoped per-month (one submission per person per target month).
+  // It's now a single standing pool: one active submission per person/restaurant at a time,
+  // carried forward across months until it wins.
+  await sql`ALTER TABLE submissions DROP CONSTRAINT IF EXISTS submissions_cycle_month_person_name_key`;
+  await sql`ALTER TABLE submissions DROP CONSTRAINT IF EXISTS submissions_cycle_month_restaurant_name_key`;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS submissions_active_person_idx
+    ON submissions (lower(person_name)) WHERE status = 'active'
+  `;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS submissions_active_restaurant_idx
+    ON submissions (lower(restaurant_name)) WHERE status = 'active'
+  `;
+
   await sql`
     CREATE TABLE IF NOT EXISTS spin_history (
       id                SERIAL PRIMARY KEY,
@@ -92,27 +113,10 @@ export function currentDisplayCycleMonth(now = new Date()): string {
   return monthString(now);
 }
 
-/** The month currently accepting submissions — always the month after the current one. */
-export function openCycleMonth(now = new Date()): string {
-  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  return monthString(next);
-}
-
-/** True on the single day that's exactly 7 days before the open cycle's submission deadline (the 1st of next month). */
-export function reminderDueToday(now = new Date()): boolean {
-  const deadline = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const reminderDate = new Date(deadline);
-  reminderDate.setDate(reminderDate.getDate() - 7);
-  return (
-    now.getFullYear() === reminderDate.getFullYear() &&
-    now.getMonth() === reminderDate.getMonth() &&
-    now.getDate() === reminderDate.getDate()
-  );
-}
-
-export async function getSubmissionsForCycle(cycleMonth: string): Promise<Submission[]> {
+/** The full standing pool of picks not yet won — this is what each month's spin draws from. */
+export async function getActivePool(): Promise<Submission[]> {
   const rows = await sql`
-    SELECT * FROM submissions WHERE cycle_month = ${cycleMonth} ORDER BY created_at ASC
+    SELECT * FROM submissions WHERE status = 'active' ORDER BY created_at ASC
   `;
   return rows as Submission[];
 }
@@ -129,22 +133,17 @@ export async function hasRestaurantWon(restaurantName: string): Promise<boolean>
   return rows.length > 0;
 }
 
-export async function isCycleLocked(cycleMonth: string): Promise<boolean> {
-  const rows = await sql`SELECT 1 FROM spin_history WHERE cycle_month = ${cycleMonth} LIMIT 1`;
-  return rows.length > 0;
-}
-
 export async function createSubmission(input: {
-  cycleMonth: string;
   personName: string;
   restaurantName: string;
   cuisine?: string;
   notes?: string;
   url?: string;
 }): Promise<Submission> {
+  const cycleMonth = currentDisplayCycleMonth();
   const rows = await sql`
     INSERT INTO submissions (cycle_month, person_name, restaurant_name, cuisine, notes, url)
-    VALUES (${input.cycleMonth}, ${input.personName}, ${input.restaurantName}, ${input.cuisine ?? null}, ${input.notes ?? null}, ${input.url ?? null})
+    VALUES (${cycleMonth}, ${input.personName}, ${input.restaurantName}, ${input.cuisine ?? null}, ${input.notes ?? null}, ${input.url ?? null})
     RETURNING *
   `;
   return rows[0] as Submission;
@@ -172,9 +171,22 @@ export async function deleteSubmission(id: number): Promise<void> {
   await sql`DELETE FROM submissions WHERE id = ${id}`;
 }
 
+export async function markSubmissionWon(id: number, cycleMonth: string): Promise<void> {
+  await sql`
+    UPDATE submissions
+    SET status = 'won', won_cycle_month = ${cycleMonth}, updated_at = now()
+    WHERE id = ${id}
+  `;
+}
+
 export async function getSpinForCycle(cycleMonth: string): Promise<SpinHistoryRow | null> {
   const rows = await sql`SELECT * FROM spin_history WHERE cycle_month = ${cycleMonth}`;
   return (rows[0] as SpinHistoryRow) ?? null;
+}
+
+export async function isCycleLocked(cycleMonth: string): Promise<boolean> {
+  const rows = await sql`SELECT 1 FROM spin_history WHERE cycle_month = ${cycleMonth} LIMIT 1`;
+  return rows.length > 0;
 }
 
 export async function getAllSpinHistory(): Promise<SpinHistoryRow[]> {
