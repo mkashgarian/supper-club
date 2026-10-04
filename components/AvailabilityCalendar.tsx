@@ -63,6 +63,8 @@ export default function AvailabilityCalendar({
   const [year, mon] = month.split("-").map(Number);
   const title = new Date(year, mon - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
+  const hasSubmitted = rows.some((r) => r.person_name === name);
+
   function memberStatus(member: string, date: string): keyof typeof STATUS {
     const row = rows.find((r) => r.person_name === member);
     return row ? (row.days[date] ?? "available") : "missing";
@@ -143,52 +145,56 @@ export default function AvailabilityCalendar({
             </button>
           ))}
         </div>
-        <p className="text-sm opacity-60">
-          {name ? `Hi ${name}! ` : "Pick your name, then "}tap a day: once = can&apos;t do it, twice = prefer not, three times = free. Everything else counts as free.
-        </p>
-        <Legend />
-        <div className="grid grid-cols-7 gap-1 text-center text-xs opacity-60">
-          {WEEKDAYS.map((w) => (
-            <div key={w}>{w}</div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1">
-          {cells.map((date, i) =>
-            date ? (
-              <button
-                key={date}
-                type="button"
-                onClick={() => toggle(date)}
-                className={`aspect-square rounded-md text-sm font-medium text-white select-none ${
-                  COLOR[days[date] ?? "available"]
-                } ${days[date] === "prefer_not" ? "text-black" : ""} ${days[date] ? "" : "opacity-40"}`}
-              >
-                {Number(date.slice(8))}
-              </button>
-            ) : (
-              <div key={`pad-${i}`} />
-            )
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving || !name.trim()}
-          className="rounded-lg bg-foreground text-background px-4 py-2 font-medium disabled:opacity-40"
-        >
-          {saving ? "Saving…" : "Save my availability"}
-        </button>
-        {message && (
-          <p className={`text-sm ${message.error ? "text-red-500" : "text-green-600"}`}>{message.text}</p>
+        {name ? (
+          <>
+            <p className="text-sm opacity-60">
+              Hi {name}! Tap a day: once = can&apos;t do it, twice = prefer not, three times = free. Everything
+              else counts as free.
+            </p>
+            <Legend />
+            <div className="grid grid-cols-7 gap-1 text-center text-xs opacity-60">
+              {WEEKDAYS.map((w) => (
+                <div key={w}>{w}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {cells.map((date, i) =>
+                date ? (
+                  <button
+                    key={date}
+                    type="button"
+                    onClick={() => toggle(date)}
+                    className={`aspect-square rounded-md text-sm font-medium text-white select-none ${
+                      COLOR[days[date] ?? "available"]
+                    } ${days[date] === "prefer_not" ? "text-black" : ""} ${days[date] ? "" : "opacity-40"}`}
+                  >
+                    {Number(date.slice(8))}
+                  </button>
+                ) : (
+                  <div key={`pad-${i}`} />
+                )
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving || !name}
+              className="rounded-lg bg-foreground text-background px-4 py-2 font-medium disabled:opacity-40"
+            >
+              {saving ? "Saving…" : "Save my availability"}
+            </button>
+            {message && (
+              <p className={`text-sm ${message.error ? "text-red-500" : "text-green-600"}`}>{message.text}</p>
+            )}
+          </>
+        ) : (
+          <p className="text-sm opacity-60">Tap your name to get started.</p>
         )}
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h3 className="font-semibold">Everyone ({rows.length} of {MEMBERS.length} submitted)</h3>
-        {rows.length === 0 ? (
-          <p className="opacity-60">Nobody has submitted for {title} yet.</p>
-        ) : (
-          <>
+      {hasSubmitted ? (
+        <section className="flex flex-col gap-3">
+          <h3 className="font-semibold">Everyone ({rows.length} of {MEMBERS.length} submitted)</h3>
             <p className="text-sm opacity-60">Tap a day to see everyone&apos;s answer.</p>
             <div className="grid grid-cols-7 gap-1 text-center text-xs opacity-60">
               {WEEKDAYS.map((w) => (
@@ -244,9 +250,10 @@ export default function AvailabilityCalendar({
               </div>
             )}
             <Legend />
-          </>
-        )}
-      </section>
+        </section>
+      ) : (
+        name && <p className="text-sm opacity-60 text-center">Save yours to see everyone&apos;s availability.</p>
+      )}
     </div>
   );
 }
