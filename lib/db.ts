@@ -114,6 +114,11 @@ export function currentDisplayCycleMonth(now = new Date()): string {
   return monthString(now);
 }
 
+/** The month after `now` — the monthly spin on the 1st decides this one, a month ahead of time. */
+export function nextCycleMonth(now = new Date()): string {
+  return monthString(new Date(now.getFullYear(), now.getMonth() + 1, 1));
+}
+
 /** The full standing pool of picks not yet won — this is what each month's spin draws from. */
 export async function getActivePool(): Promise<Submission[]> {
   const rows = await sql`
@@ -284,4 +289,22 @@ export async function saveAvailability(
     RETURNING *
   `;
   return rows[0] as AvailabilityRow;
+}
+
+// "Everyone has submitted" announcements share the reminders_sent table, keyed by
+// "availability:<month>" so each month is announced at most once.
+const availabilityKey = (month: string) => `availability:${month}`;
+
+/** Atomically claims the right to announce a month; false if it was already announced. */
+export async function claimAvailabilityAnnouncement(month: string): Promise<boolean> {
+  const rows = await sql`
+    INSERT INTO reminders_sent (cycle_month) VALUES (${availabilityKey(month)})
+    ON CONFLICT (cycle_month) DO NOTHING
+    RETURNING 1
+  `;
+  return rows.length > 0;
+}
+
+export async function releaseAvailabilityAnnouncement(month: string): Promise<void> {
+  await sql`DELETE FROM reminders_sent WHERE cycle_month = ${availabilityKey(month)}`;
 }

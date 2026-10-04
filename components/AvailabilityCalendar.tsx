@@ -47,9 +47,12 @@ function nextStatus(s: DayStatus | undefined): DayStatus | undefined {
 
 export default function AvailabilityCalendar({
   month,
+  restaurant,
   initialAvailability,
 }: {
   month: string;
+  /** The month's chosen restaurant, if the spin has already happened. */
+  restaurant?: string | null;
   initialAvailability: AvailabilityRow[];
 }) {
   const [rows, setRows] = useState(initialAvailability);
@@ -128,7 +131,7 @@ export default function AvailabilityCalendar({
       </div>
 
       <section className="flex flex-col gap-3">
-        <h3 className="font-semibold">Your availability</h3>
+        <h3 className="font-semibold">Your availability{restaurant ? ` for ${restaurant}` : ""}</h3>
         <div className="flex flex-wrap gap-2">
           {MEMBERS.map((m) => (
             <button

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyCronSecret } from "@/lib/auth";
-import { currentDisplayCycleMonth, getActivePool, insertSpinResult, isCycleLocked, markSubmissionWon } from "@/lib/db";
+import { formatMonthName, getActivePool, insertSpinResult, isCycleLocked, markSubmissionWon, nextCycleMonth } from "@/lib/db";
 import { postToDiscord } from "@/lib/discord";
 import { pickWinner } from "@/lib/spin";
 
@@ -9,10 +9,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const cycleMonth = currentDisplayCycleMonth();
+  // Spin on the 1st for the *following* month (e.g. Nov 1 decides December).
+  const cycleMonth = nextCycleMonth();
 
   if (await isCycleLocked(cycleMonth)) {
-    return NextResponse.json({ ok: true, skipped: "already spun for this month" });
+    return NextResponse.json({ ok: true, skipped: "already spun for next month" });
   }
 
   const pool = await getActivePool();
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
 
   if (!winner) {
     await postToDiscord(
-      `No active picks in the pool, so there's nothing to spin this month. Submit your restaurant here: ${process.env.SITE_URL ?? ""}`
+      `No active picks in the pool, so there's nothing to spin for ${formatMonthName(cycleMonth)}. Submit your restaurant here: ${process.env.SITE_URL ?? ""}`
     );
     return NextResponse.json({ ok: true, skipped: "empty pool" });
   }
@@ -34,7 +35,11 @@ export async function GET(req: NextRequest) {
   await markSubmissionWon(winner.id, cycleMonth);
 
   await postToDiscord(
-    `🎡 This month's pick is in! Tap to watch the wheel land on it: ${process.env.SITE_URL ?? ""}`
+    `🎡 ${formatMonthName(cycleMonth)}'s pick is in! Tap to watch the wheel land on it: ${process.env.SITE_URL ?? ""}`
+  );
+
+  await postToDiscord(
+    `📅 Add your availability for ${formatMonthName(cycleMonth)} so we can lock in a date: ${process.env.SITE_URL ?? ""}/availability?month=${cycleMonth}`
   );
 
   // Pool just emptied — solicit the next round now instead of waiting, so there's a full

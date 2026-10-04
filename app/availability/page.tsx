@@ -1,6 +1,6 @@
 import Link from "next/link";
 import AvailabilityCalendar from "@/components/AvailabilityCalendar";
-import { getAvailability, monthString } from "@/lib/db";
+import { getAvailability, getSpinForCycle, monthString } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export default async function AvailabilityPage({
 }) {
   const { month: requested } = await searchParams;
   const month = requested && /^\d{4}-(0[1-9]|1[0-2])$/.test(requested) ? requested : monthString(new Date());
-  const availability = await getAvailability(month);
+  const [availability, spin] = await Promise.all([getAvailability(month), getSpinForCycle(month)]);
 
   return (
     <main className="min-h-screen max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6">
@@ -21,7 +21,7 @@ export default async function AvailabilityPage({
           ← Back
         </Link>
       </div>
-      <AvailabilityCalendar key={month} month={month} initialAvailability={availability} />
+      <AvailabilityCalendar key={month} month={month} restaurant={spin?.winner_restaurant} initialAvailability={availability} />
     </main>
   );
 }

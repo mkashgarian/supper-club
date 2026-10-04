@@ -33,7 +33,7 @@ export default async function HomePage() {
             winnerPerson={spin.winner_person}
           />
         ) : (
-          <p className="opacity-60">No spin yet this month — check back on the 1st!</p>
+          <p className="opacity-60">No pick for this month yet.</p>
         )}
       </section>
 
