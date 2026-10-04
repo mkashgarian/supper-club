@@ -38,10 +38,10 @@ function buildCells(month: string): (string | null)[] {
   return cells;
 }
 
-/** Click cycle: available -> unavailable -> non-ideal -> available. */
+/** Click cycle: available -> non-ideal -> unavailable -> available. */
 function nextStatus(s: DayStatus | undefined): DayStatus | undefined {
-  if (!s) return "unavailable";
-  if (s === "unavailable") return "prefer_not";
+  if (!s) return "prefer_not";
+  if (s === "prefer_not") return "unavailable";
   return undefined;
 }
 
@@ -149,7 +149,7 @@ export default function AvailabilityCalendar({
         {name ? (
           <>
             <p className="text-sm opacity-60">
-              Hi {name}! Tap a day: once = unavailable, twice = non-ideal, three times = free. Everything
+              Hi {name}! Tap a day: once = non-ideal, twice = unavailable, three times = free. Everything
               else counts as free.
             </p>
             <Legend />
