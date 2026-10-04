@@ -4,6 +4,7 @@ import {
   formatDateList,
   formatDateListCapped,
   hasEveryoneSubmitted,
+  missingMembers,
   summarizeBestDates,
 } from "../lib/availability.ts";
 import type { AvailabilityRow, DayStatus } from "../lib/db.ts";
@@ -117,5 +118,15 @@ describe("date formatting", () => {
       formatDateListCapped(dates, 5),
       "Tue Dec 1, Wed Dec 2, Sat Dec 5, Sun Dec 6, Mon Dec 7, and 2 more"
     );
+  });
+});
+
+describe("missingMembers", () => {
+  test("lists members without a row, in member order, ignoring case", () => {
+    assert.deepEqual(missingMembers([row("bob")], ["Allie", "Bob", "Cy"]), ["Allie", "Cy"]);
+  });
+
+  test("empty once everyone has submitted", () => {
+    assert.deepEqual(missingMembers([row("Allie"), row("Bob")], ["Allie", "Bob"]), []);
   });
 });

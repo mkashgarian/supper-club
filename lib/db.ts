@@ -200,6 +200,12 @@ export async function getAllSpinHistory(): Promise<SpinHistoryRow[]> {
   return rows as SpinHistoryRow[];
 }
 
+/** The spin for the furthest-out month, or null if there are none yet. */
+export async function getLatestSpin(): Promise<SpinHistoryRow | null> {
+  const rows = await sql`SELECT * FROM spin_history ORDER BY cycle_month DESC LIMIT 1`;
+  return (rows[0] as SpinHistoryRow) ?? null;
+}
+
 export async function insertSpinResult(input: {
   cycleMonth: string;
   winnerPerson: string;
@@ -294,6 +300,21 @@ export async function saveAvailability(
 // "Everyone has submitted" announcements share the reminders_sent table, keyed by
 // "availability:<month>" so each month is announced at most once.
 const availabilityKey = (month: string) => `availability:${month}`;
+const nudgeKey = (month: string) => `availability-nudge:${month}`;
+
+/** Atomically claims the one-time nudge for stragglers on a month; false if already sent. */
+export async function claimAvailabilityNudge(month: string): Promise<boolean> {
+  const rows = await sql`
+    INSERT INTO reminders_sent (cycle_month) VALUES (${nudgeKey(month)})
+    ON CONFLICT (cycle_month) DO NOTHING
+    RETURNING 1
+  `;
+  return rows.length > 0;
+}
+
+export async function releaseAvailabilityNudge(month: string): Promise<void> {
+  await sql`DELETE FROM reminders_sent WHERE cycle_month = ${nudgeKey(month)}`;
+}
 
 /** Atomically claims the right to announce a month; false if it was already announced. */
 export async function claimAvailabilityAnnouncement(month: string): Promise<boolean> {

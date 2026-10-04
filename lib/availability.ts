@@ -14,6 +14,12 @@ export function hasEveryoneSubmitted(rows: AvailabilityRow[], members: readonly 
   return members.every((m) => submitted.has(m.toLowerCase()));
 }
 
+/** Members with no availability row yet, in the members' own order. */
+export function missingMembers(rows: AvailabilityRow[], members: readonly string[]): string[] {
+  const submitted = new Set(rows.map((r) => r.person_name.toLowerCase()));
+  return members.filter((m) => !submitted.has(m.toLowerCase()));
+}
+
 /**
  * Best dates in a month: everyone free if possible, otherwise the fewest unavailable (ideally
  * none), then the fewest non-ideal. Dates before `today` (YYYY-MM-DD) are ignored.
