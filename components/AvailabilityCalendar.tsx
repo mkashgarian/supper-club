@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { MEMBERS } from "@/lib/members";
 import type { AvailabilityRow, DayStatus } from "@/lib/db";
+import { groupHours, isClosedOn, type WeeklyHours } from "@/lib/hours";
 
 type Days = Record<string, DayStatus>;
 
@@ -48,11 +49,14 @@ function nextStatus(s: DayStatus | undefined): DayStatus | undefined {
 export default function AvailabilityCalendar({
   month,
   restaurant,
+  hours,
   initialAvailability,
 }: {
   month: string;
   /** The month's chosen restaurant, if the spin has already happened. */
   restaurant?: string | null;
+  /** The chosen restaurant's weekly hours, if known; closed days get a warning marker. */
+  hours?: WeeklyHours | null;
   initialAvailability: AvailabilityRow[];
 }) {
   const [rows, setRows] = useState(initialAvailability);
@@ -130,6 +134,21 @@ export default function AvailabilityCalendar({
         </Link>
       </div>
 
+      {restaurant && hours && (
+        <div className="rounded-lg border border-black/10 dark:border-white/15 p-3 text-sm flex flex-col gap-1">
+          <p className="font-medium">{restaurant} is open</p>
+          <ul className="flex flex-col gap-0.5">
+            {groupHours(hours).map((g) => (
+              <li key={g.days} className="flex gap-2">
+                <span className="w-16 shrink-0 opacity-60">{g.days}</span>
+                <span>{g.hours}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs opacity-60">⚠️ marks days it&apos;s closed.</p>
+        </div>
+      )}
+
       <section className="flex flex-col gap-3">
         <h3 className="font-semibold">Your availability{restaurant ? ` for ${restaurant}` : ""}</h3>
         <div className="flex flex-wrap gap-2">
@@ -168,11 +187,16 @@ export default function AvailabilityCalendar({
                     key={date}
                     type="button"
                     onClick={() => toggle(date)}
-                    className={`aspect-square rounded-md text-sm font-medium text-white select-none ${
+                    className={`relative aspect-square rounded-md text-sm font-medium text-white select-none ${
                       COLOR[days[date] ?? "available"]
                     } ${days[date] === "prefer_not" ? "text-black" : ""} ${days[date] ? "" : "opacity-40"}`}
                   >
                     {Number(date.slice(8))}
+                    {isClosedOn(hours, date) && (
+                      <span className="absolute top-0.5 right-0.5 text-[10px] leading-none" title={`${restaurant} is closed`}>
+                        ⚠️
+                      </span>
+                    )}
                   </button>
                 ) : (
                   <div key={`pad-${i}`} />
@@ -218,7 +242,10 @@ export default function AvailabilityCalendar({
                         : "border-black/10 dark:border-white/15"
                     }`}
                   >
-                    <div className="text-[10px] leading-none opacity-60 mb-1">{Number(date.slice(8))}</div>
+                    <div className="text-[10px] leading-none opacity-60 mb-1">
+                      {Number(date.slice(8))}
+                      {isClosedOn(hours, date) && <span title={`${restaurant} is closed`}> ⚠️</span>}
+                    </div>
                     <div className="flex flex-wrap gap-0.5">
                       {MEMBERS.map((m) => (
                         <span key={m} className={`w-2.5 h-2.5 rounded-[2px] ${STATUS[memberStatus(m, date)].color}`} />

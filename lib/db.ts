@@ -1,4 +1,5 @@
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
+import type { WeeklyHours } from "./hours.ts";
 
 let cachedSql: NeonQueryFunction<false, false> | null = null;
 
@@ -23,6 +24,8 @@ export type Submission = {
   cuisine: string | null;
   notes: string | null;
   url: string | null;
+  /** Weekly opening hours, entered by hand once a restaurant is picked; null when unknown. */
+  hours: WeeklyHours | null;
   status: SubmissionStatus;
   won_cycle_month: string | null;
   created_at: string;
@@ -59,6 +62,7 @@ export async function initSchema() {
   await sql`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS cuisine TEXT`;
   await sql`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'`;
   await sql`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS won_cycle_month TEXT`;
+  await sql`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS hours JSONB`;
 
   // The pool used to be scoped per-month (one submission per person per target month).
   // It's now a single standing pool: one active submission per person/restaurant at a time,
@@ -129,6 +133,16 @@ export async function getActivePool(): Promise<Submission[]> {
 
 export async function getSubmissionById(id: number): Promise<Submission | null> {
   const rows = await sql`SELECT * FROM submissions WHERE id = ${id}`;
+  return (rows[0] as Submission) ?? null;
+}
+
+/** The submission that won a month's spin, for details like opening hours. */
+export async function getWinningSubmission(cycleMonth: string, restaurantName: string): Promise<Submission | null> {
+  const rows = await sql`
+    SELECT * FROM submissions
+    WHERE won_cycle_month = ${cycleMonth} AND lower(restaurant_name) = lower(${restaurantName})
+    LIMIT 1
+  `;
   return (rows[0] as Submission) ?? null;
 }
 
