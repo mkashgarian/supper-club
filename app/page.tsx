@@ -14,9 +14,14 @@ export default async function HomePage() {
     <main className="min-h-screen max-w-2xl mx-auto px-4 py-8 flex flex-col gap-10">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">🍽️ Supper Club</h1>
-        <Link href="/history" className="text-sm underline underline-offset-4 opacity-70">
-          History
-        </Link>
+        <div className="flex gap-4">
+          <Link href="/availability" className="text-sm underline underline-offset-4 opacity-70">
+            Availability
+          </Link>
+          <Link href="/history" className="text-sm underline underline-offset-4 opacity-70">
+            History
+          </Link>
+        </div>
       </div>
 
       <section className="flex flex-col items-center gap-4 text-center">

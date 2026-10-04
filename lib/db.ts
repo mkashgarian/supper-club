@@ -91,6 +91,7 @@ export async function initSchema() {
       sent_at     TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `;
+  await ensureAvailabilityTable();
 }
 
 function pad(n: number) {
@@ -226,4 +227,61 @@ export async function markReminderSent(cycleMonth: string): Promise<void> {
     INSERT INTO reminders_sent (cycle_month) VALUES (${cycleMonth})
     ON CONFLICT (cycle_month) DO NOTHING
   `;
+}
+
+export type DayStatus = "unavailable" | "prefer_not";
+
+export type AvailabilityRow = {
+  month: string;
+  person_name: string;
+  /** Only days that differ from the default (available) are stored: "2026-10-14" -> status. */
+  days: Record<string, DayStatus>;
+  updated_at: string;
+};
+
+let availabilityTableReady: Promise<void> | null = null;
+
+/** Creates the availability table on first use, so the feature works without re-running init-db. */
+function ensureAvailabilityTable(): Promise<void> {
+  availabilityTableReady ??= (async () => {
+    await sql`
+      CREATE TABLE IF NOT EXISTS availability (
+        month       TEXT NOT NULL,
+        person_name TEXT NOT NULL,
+        days        JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `;
+    await sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS availability_month_person_idx
+      ON availability (month, lower(person_name))
+    `;
+  })().catch((err) => {
+    availabilityTableReady = null;
+    throw err;
+  });
+  return availabilityTableReady;
+}
+
+export async function getAvailability(month: string): Promise<AvailabilityRow[]> {
+  await ensureAvailabilityTable();
+  const rows = await sql`SELECT * FROM availability WHERE month = ${month} ORDER BY updated_at ASC`;
+  return rows as AvailabilityRow[];
+}
+
+/** Replaces a person's whole month. A row with no days still records that they've responded. */
+export async function saveAvailability(
+  month: string,
+  personName: string,
+  days: Record<string, DayStatus>
+): Promise<AvailabilityRow> {
+  await ensureAvailabilityTable();
+  const rows = await sql`
+    INSERT INTO availability (month, person_name, days)
+    VALUES (${month}, ${personName}, ${JSON.stringify(days)}::jsonb)
+    ON CONFLICT (month, lower(person_name))
+    DO UPDATE SET days = EXCLUDED.days, person_name = EXCLUDED.person_name, updated_at = now()
+    RETURNING *
+  `;
+  return rows[0] as AvailabilityRow;
 }
