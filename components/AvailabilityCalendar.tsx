@@ -136,7 +136,7 @@ export default function AvailabilityCalendar({
 
       {restaurant && hours && (
         <div className="rounded-lg border border-black/10 dark:border-white/15 p-3 text-sm flex flex-col gap-1">
-          <p className="font-medium">{restaurant} is open</p>
+          <p className="font-medium">{restaurant} hours:</p>
           <ul className="flex flex-col gap-0.5">
             {groupHours(hours).map((g) => (
               <li key={g.days} className="flex gap-2">
@@ -145,7 +145,7 @@ export default function AvailabilityCalendar({
               </li>
             ))}
           </ul>
-          <p className="text-xs opacity-60">⚠️ marks days it&apos;s closed.</p>
+          <p className="text-xs opacity-60">⚠️ indicates which days {restaurant} is closed.</p>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
+  buildAvailabilitySummary,
   formatDateList,
   formatDateListCapped,
   hasEveryoneSubmitted,
@@ -128,5 +129,62 @@ describe("missingMembers", () => {
 
   test("empty once everyone has submitted", () => {
     assert.deepEqual(missingMembers([row("Allie"), row("Bob")], ["Allie", "Bob"]), []);
+  });
+});
+
+describe("summarizeBestDates with opening hours", () => {
+  const closedOnSundays = (date: string) => new Date(`${date}T12:00:00`).getDay() !== 0;
+
+  test("skips days the restaurant is closed", () => {
+    const s = summarizeBestDates("2026-12", [row("A")], "2026-12-01", closedOnSundays)!;
+    assert.ok(!s.dates.includes("2026-12-06")); // Sunday
+    assert.ok(s.dates.includes("2026-12-05"));
+    assert.equal(s.dates.length, 31 - 4); // Dec 2026 has 4 Sundays
+  });
+
+  test("a red on every open day is reported even if closed days are free", () => {
+    const sundays = ["2026-12-06", "2026-12-13", "2026-12-20", "2026-12-27"];
+    const all = Array.from({ length: 31 }, (_, i) => `2026-12-${String(i + 1).padStart(2, "0")}`);
+    const rows = [row("A", Object.fromEntries(all.filter((d) => !sundays.includes(d)).map((d) => [d, "unavailable" as const])))];
+    const s = summarizeBestDates("2026-12", rows, "2026-12-01", closedOnSundays)!;
+    assert.equal(s.unavailable, 1);
+    assert.ok(s.dates.every((d) => !sundays.includes(d)));
+  });
+});
+
+describe("buildAvailabilitySummary", () => {
+  const base = { monthName: "December", memberCount: 7 };
+
+  test("everyone free, with a restaurant's hours applied", () => {
+    const summary = { everyoneFree: true, dates: ["2026-12-04", "2026-12-05"], nonIdeal: 0, unavailable: 0 };
+    assert.equal(
+      buildAvailabilitySummary({ ...base, summary, openRestaurant: "Bar Virgil" }),
+      "✅ Everyone's submitted availability for December! Dates that work for all 7 of us and Bar Virgil is open: Fri Dec 4, Sat Dec 5"
+    );
+  });
+
+  test("no restaurant hours: no mention of being open", () => {
+    const summary = { everyoneFree: true, dates: ["2026-12-04"], nonIdeal: 0, unavailable: 0 };
+    assert.ok(!buildAvailabilitySummary({ ...base, summary }).includes("open"));
+  });
+
+  test("no conflicts but some non-ideal", () => {
+    const summary = { everyoneFree: false, dates: ["2026-12-04"], nonIdeal: 1, unavailable: 0 };
+    assert.equal(
+      buildAvailabilitySummary({ ...base, summary, openRestaurant: "Bar Virgil" }),
+      "✅ Everyone's submitted availability for December! No date is perfect for everyone, but these are the best options that everyone should be able to make: Fri Dec 4"
+    );
+  });
+
+  test("conflicts on every open day suggests another place or more discussion", () => {
+    const summary = { everyoneFree: false, dates: ["2026-12-04"], nonIdeal: 0, unavailable: 1 };
+    const msg = buildAvailabilitySummary({ ...base, summary, openRestaurant: "Bar Virgil" });
+    assert.ok(msg.includes("every day Bar Virgil is open"));
+    assert.ok(msg.includes("different place or discussing dates"));
+    assert.ok(!msg.includes("Dec 4"));
+  });
+
+  test("restaurant never open in the rest of the month", () => {
+    assert.ok(buildAvailabilitySummary({ ...base, summary: null, openRestaurant: "Bar Virgil" }).includes("no upcoming dates left when Bar Virgil is open"));
   });
 });

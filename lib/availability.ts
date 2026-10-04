@@ -22,9 +22,15 @@ export function missingMembers(rows: AvailabilityRow[], members: readonly string
 
 /**
  * Best dates in a month: everyone free if possible, otherwise the fewest unavailable (ideally
- * none), then the fewest non-ideal. Dates before `today` (YYYY-MM-DD) are ignored.
+ * none), then the fewest non-ideal. Dates before `today` (YYYY-MM-DD) are ignored,
+ * as are dates where `isOpen` (when given) says the restaurant is closed.
  */
-export function summarizeBestDates(month: string, rows: AvailabilityRow[], today: string): DateSummary | null {
+export function summarizeBestDates(
+  month: string,
+  rows: AvailabilityRow[],
+  today: string,
+  isOpen?: (date: string) => boolean
+): DateSummary | null {
   const [y, m] = month.split("-").map(Number);
   const count = new Date(y, m, 0).getDate();
 
@@ -32,6 +38,7 @@ export function summarizeBestDates(month: string, rows: AvailabilityRow[], today
   for (let d = 1; d <= count; d++) {
     const date = `${month}-${String(d).padStart(2, "0")}`;
     if (date < today) continue;
+    if (isOpen && !isOpen(date)) continue;
     let reds = 0;
     let yellows = 0;
     for (const r of rows) {
@@ -77,4 +84,37 @@ export function formatDateListCapped(dates: string[], limit: number): string {
   if (dates.length <= limit) return formatDateList(dates);
   const chosen = [...dates.filter(isWeekend), ...dates.filter((d) => !isWeekend(d))].slice(0, limit).sort();
   return `${formatDateList(chosen)}, and ${dates.length - limit} more`;
+}
+
+/** Fallback (not-everyone-free) lists get long on mostly empty calendars, so they're capped. */
+export const FALLBACK_DATE_LIMIT = 5;
+
+/**
+ * The Discord post once everyone has submitted. `openRestaurant` is the restaurant's name only when
+ * its hours are known and were used to filter `summary` to days it's open; otherwise leave it out.
+ */
+export function buildAvailabilitySummary(input: {
+  monthName: string;
+  memberCount: number;
+  summary: DateSummary | null;
+  openRestaurant?: string | null;
+}): string {
+  const { monthName, memberCount, summary, openRestaurant } = input;
+  const intro = `✅ Everyone's submitted availability for ${monthName}`;
+  const open = openRestaurant ? ` and ${openRestaurant} is open` : "";
+
+  if (!summary) {
+    return openRestaurant
+      ? `${intro}, but there are no upcoming dates left when ${openRestaurant} is open. Consider picking a different place or discussing dates.`
+      : `${intro}, but there are no upcoming dates left to pick from.`;
+  }
+  if (summary.everyoneFree) {
+    return `${intro}! Dates that work for all ${memberCount} of us${open}: ${formatDateList(summary.dates)}`;
+  }
+  if (summary.unavailable === 0) {
+    return `${intro}! No date is perfect for everyone, but these are the best options that everyone should be able to make: ${formatDateListCapped(summary.dates, FALLBACK_DATE_LIMIT)}`;
+  }
+  return openRestaurant
+    ? `${intro}, but on every day ${openRestaurant} is open, at least one person is unavailable. Consider picking a different place or discussing dates.`
+    : `${intro}, but every upcoming date has at least one person unavailable. Consider discussing dates.`;
 }
