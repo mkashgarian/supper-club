@@ -88,6 +88,7 @@ export default function AvailabilityCalendar({
   }
 
   async function save() {
+    if (!confirm(`Save this as ${name}'s availability? This replaces anything ${name} saved before.`)) return;
     setSaving(true);
     setMessage(null);
     try {
