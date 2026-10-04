@@ -16,8 +16,8 @@ const COLOR = {
 } as const;
 
 const STATUS = {
-  unavailable: { color: COLOR.unavailable, label: "Can't do it" },
-  prefer_not: { color: COLOR.prefer_not, label: "Prefers not" },
+  unavailable: { color: COLOR.unavailable, label: "Unavailable" },
+  prefer_not: { color: COLOR.prefer_not, label: "Non-ideal" },
   available: { color: COLOR.available, label: "Free" },
   missing: { color: "bg-gray-300 dark:bg-gray-700", label: "Hasn't submitted" },
 } as const;
@@ -38,7 +38,7 @@ function buildCells(month: string): (string | null)[] {
   return cells;
 }
 
-/** Click cycle: available -> unavailable -> prefer not -> available. */
+/** Click cycle: available -> unavailable -> non-ideal -> available. */
 function nextStatus(s: DayStatus | undefined): DayStatus | undefined {
   if (!s) return "unavailable";
   if (s === "unavailable") return "prefer_not";
@@ -149,7 +149,7 @@ export default function AvailabilityCalendar({
         {name ? (
           <>
             <p className="text-sm opacity-60">
-              Hi {name}! Tap a day: once = can&apos;t do it, twice = prefer not, three times = free. Everything
+              Hi {name}! Tap a day: once = unavailable, twice = non-ideal, three times = free. Everything
               else counts as free.
             </p>
             <Legend />
@@ -263,10 +263,10 @@ function Legend() {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-80">
       <span className="flex items-center gap-1">
-        <i className={`w-3 h-3 rounded-sm ${COLOR.unavailable}`} /> Can&apos;t
+        <i className={`w-3 h-3 rounded-sm ${COLOR.unavailable}`} /> Unavailable
       </span>
       <span className="flex items-center gap-1">
-        <i className={`w-3 h-3 rounded-sm ${COLOR.prefer_not}`} /> Prefer not
+        <i className={`w-3 h-3 rounded-sm ${COLOR.prefer_not}`} /> Non-ideal
       </span>
       <span className="flex items-center gap-1">
         <i className={`w-3 h-3 rounded-sm ${COLOR.available}`} /> Free
