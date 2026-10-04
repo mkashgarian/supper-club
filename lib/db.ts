@@ -1,4 +1,4 @@
-import { neon, NeonQueryFunction } from "@neondatabase/serverless";
+import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 
 let cachedSql: NeonQueryFunction<false, false> | null = null;
 
