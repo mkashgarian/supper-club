@@ -1,14 +1,20 @@
 import Link from "next/link";
 import SpinWheel from "@/components/SpinWheel";
 import SubmissionsSection from "@/components/SubmissionsSection";
-import { currentDisplayCycleMonth, formatMonthName, getActivePool, getSpinForCycle } from "@/lib/db";
+import { currentDisplayCycleMonth, formatMonthName, getActivePool, getSpinForCycle, nextCycleMonth } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const displayMonth = currentDisplayCycleMonth();
-
-  const [spin, activePool] = await Promise.all([getSpinForCycle(displayMonth), getActivePool()]);
+  // Spins happen a month ahead, so lead with the following month's pick. Fall back to the current
+  // month's pick if the next one hasn't been spun yet.
+  const [nextSpin, currentSpin, activePool] = await Promise.all([
+    getSpinForCycle(nextCycleMonth()),
+    getSpinForCycle(currentDisplayCycleMonth()),
+    getActivePool(),
+  ]);
+  const spin = nextSpin ?? currentSpin;
+  const displayMonth = spin?.cycle_month ?? nextCycleMonth();
 
   return (
     <main className="min-h-screen max-w-2xl mx-auto px-4 py-8 flex flex-col gap-10">
@@ -33,7 +39,12 @@ export default async function HomePage() {
             winnerPerson={spin.winner_person}
           />
         ) : (
-          <p className="opacity-60">No pick for this month yet.</p>
+          <p className="opacity-60">No pick yet — check back after the spin on the 1st!</p>
+        )}
+        {currentSpin && currentSpin.cycle_month !== displayMonth && (
+          <p className="text-sm opacity-60">
+            This month ({formatMonthName(currentSpin.cycle_month)}): {currentSpin.winner_restaurant}
+          </p>
         )}
       </section>
 
